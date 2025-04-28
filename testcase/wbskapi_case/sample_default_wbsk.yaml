@@ -1,0 +1,32 @@
+type: websocket
+meta:
+  name: sample_wbsk_testing
+  env: uat
+
+cases:
+- params:
+    name: action_login
+    url: wss://web.qosuat.com/ws/
+    method: websocket
+    headers:
+      Content-Type: application/json
+    retry: 2
+    loop: 1
+    keep: None
+    msg_id: 201
+    msg_body:
+        userName: 
+        password: 
+        imei: 
+        model: 
+        channel: 德州
+        channelInt: 100
+        version: 1.15.27.4
+        jingDu: 200
+        weiDu: 200
+        language: 0
+        verify: 1
+  expect:
+    - [field: msg_ig, value: 201, comparator: equals]
+    - [field: reason, value: loging success, comparator: equals]
+

@@ -1,0 +1,22 @@
+type: api
+meta:
+  name: send_get_api
+  env: uat
+
+cases:
+- params:
+    name: demo_send
+    url: https://jsonplaceholder.typicode.com
+    method: get
+    headers:
+      Content-Type: application/json
+    retry: 0
+    loop: 1
+    keep: None
+    body:
+      postId: 1
+  expect:
+    - field: status_code
+      value: 200
+      comparator: equals
+
