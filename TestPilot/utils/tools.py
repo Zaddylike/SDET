@@ -11,13 +11,11 @@ def encode_pwd(user_id: str, password: str):
 
 #  combined the message body
 
-def msgbody_build(msg_id: int, msg_body: str):
+def msgbody_build(msg_id: int, msg_body: str)-> dict:
     try:
         str_body = json.dumps(msg_body)
     except Exception as e:
         logging.debug(f"[DEBUG] 傳送參數轉換JSON錯誤: {e}")
         str_body = str(msg_body)
-    return {
-        "msgId": msg_id,
-        "msgbody": str_body
-    }
+    msg = {"msgId": msg_id,"msgbody": str_body}
+    return msg

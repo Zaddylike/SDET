@@ -1,6 +1,6 @@
 type: api
 meta:
-  name: send_get_post
+  name: sample_post
   env: uat
 
 cases:

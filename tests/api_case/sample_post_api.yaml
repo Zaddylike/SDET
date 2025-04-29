@@ -1,0 +1,26 @@
+type: api
+meta:
+  name: sample_send_post
+  env: uat
+
+cases:
+- params:
+    name: free_spin
+    url: https://wap.qosuat.com/api/spin/spin_wheel
+    method: post
+    headers:
+      Content-Type: application/json
+    retry: 0
+    loop: 1
+    keep: None
+    body:
+      userId: "1368601"
+      token: "1e09f6d7b28ec5c8a546f0c7470f418b"
+  expect:
+    - field: status_code
+      value: 200
+      comparator: equals
+    - field: data.awards.award_type
+      value: COIN
+      comparator: equals
+

@@ -1,0 +1,93 @@
+type: websocket
+meta:
+  name: sample_websocket
+  env: uat
+
+cases:
+- params:
+    name: action_login
+    url: wss://web.qosuat.com/ws/
+    method: websocket
+    headers:
+      Content-Type: application/json
+    retry: 0
+    loop: 1
+    keep: null
+    msg_id: 201
+    msg_body:
+        userName: "+852 0911223344556"
+        password: V1ZkR2FGbFVSWGxOZWxFOUt6ZzFNaUF3T1RFeE1qSXpNelEwTlRVMnFhendzeA==
+        imei: 
+        model: 
+        channel: 德州
+        channelInt: 100
+        version: 1.15.27.4
+        jingDu: 200
+        weiDu: 200
+        language: 0
+        verify: 1
+  expect:
+    - field: msgId
+      value: 201
+      comparator: equals
+    - field: msgBody.reason
+      value: login success
+      comparator: equals
+
+- params:
+    name: 進入_NLH
+    url: wss://web.qosuat.com/ws/
+    method: websocket
+    headers:
+      Content-Type: "application/json"
+    retry: 2
+    loop: 1
+    keep: null
+    msg_id: 207
+    msg_body:
+      "gameType": 800
+      "gameId": 1282387
+      "ChangeDesk": False
+      "is213Broadable": False
+      "isCoinQuick": True
+      "coinQuickLevel": 182
+  expect:
+    - field: msgId
+      value: 207
+      comparator: equals
+    - field: msgBody.reason
+      value: 进入房间成功！
+      comparator: equals
+
+- params:
+    name: 坐下_NLH
+    url: wss://web.qosuat.com/ws/
+    method: websocket
+    headers:
+      Content-Type: "application/json"
+    retry: 0
+    loop: 1
+    keep: null
+    msg_id: 208
+    msg_body:
+      "pos": 1
+  expect: {}
+
+- params:
+    name: 站起_NLH
+    url: wss://web-pp2.pkxxz.com/ws/
+    method: websocket
+    headers:
+      Content-Type: "application/json"
+    retry: 3
+    loop: 1
+    keep: 
+    msg_id: 214
+    msg_body: {}
+  expect:
+    - field: msgId
+      value: 214
+      comparator: equals
+    - field: msgBody.reason
+      value: 成功！
+      comparator: equals

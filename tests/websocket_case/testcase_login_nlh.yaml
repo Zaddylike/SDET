@@ -1,22 +1,22 @@
 type: websocket
 meta:
-  name: sample_wbsk_testing
+  name: loging_play_nlh
   env: uat
 
 cases:
 - params:
-    name: action_login
+    name: action_Login
     url: wss://web.qosuat.com/ws/
     method: websocket
     headers:
       Content-Type: application/json
-    retry: 2
+    retry: True
     loop: 1
-    keep: None
+    keep: token
     msg_id: 201
     msg_body:
-        userName: 
-        password: 
+        userName: "+852 0911223344556"
+        password: V1ZkR2FGbFVSWGxOZWxFOUt6ZzFNaUF3T1RFeE1qSXpNelEwTlRVMnFhendzeA==
         imei: 
         model: 
         channel: 德州
@@ -27,6 +27,9 @@ cases:
         language: 0
         verify: 1
   expect:
-    - [field: msg_ig, value: 201, comparator: equals]
-    - [field: reason, value: loging success, comparator: equals]
-
+    - field: msg_id
+      value: 201
+      comparator: equals
+    - field: msgbody.reason
+      value: loging success
+      comparator: equals

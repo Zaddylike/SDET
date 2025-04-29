@@ -1,19 +1,41 @@
-import base64, json, logging, time
+#  internal  function
 
+#  internal parameter
 
+#  external function and parameter
+from functools import wraps
+import logging
+import asyncio
+import time
 
-# try-except decorator
+#  try-except decorator
 
-def try_wrapper(func):
-    def wrapper(*args, **kwargs):
-        try:
-            result = func(*args, **kwargs)
-        except Exception as e:
-            logging.error(f"Error occurred: {e}", exc_info=True)
-        return result
-    return wrapper
+def try_wrapper(log_msg=None):
+    def decorator(func):
+        if asyncio.iscoroutinefunction(func):
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    logging.error(f"{log_msg or func.__name__} Failed : {e}", exc_info=True)
+                    raise
+            return async_wrapper
+        else:
+            @wraps(func)
+            def sync_wrapper(*args, **kwargs):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    logging.error(f"{log_msg or func.__name__} Failed : {e}", exc_info=True)
+                    raise
+            return sync_wrapper
+    if log_msg is None:
+        return decorator
+    else:
+        return decorator(log_msg)
 
-#  Regiter the patterns
+#  register some pattern
 
 def register_pattern(sometging_pattern,method):
     def wrapper(func):
@@ -21,11 +43,12 @@ def register_pattern(sometging_pattern,method):
         return func
     return wrapper
 
-#  count time
-def timer(func):
-    def wrapper(*args, **kwargs):
+#  count time for wbsk
+
+def wbsk_timer(func):
+    async def wrapper(*args, **kwargs):
         start = time.perf_counter()
-        result = func(*args, **kwargs)
+        status, reps = await func(*args, **kwargs)
         end = time.perf_counter()
-        logging.info(f"running time: {end-start:.4f}s")
-        return result 
+        return status, reps
+    return wrapper

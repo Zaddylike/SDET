@@ -6,5 +6,4 @@ from .tools import (
 from .candy import (
     try_wrapper,
     register_pattern,
-    timer
 )

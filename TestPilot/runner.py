@@ -1,40 +1,53 @@
 #  internal  function
-from TestPilot.data_loader import loading_yaml, path_shaving
+from TestPilot.data_loader import loading_yaml, path_shaving, queue_case_files
 #  internal parameter
 from TestPilot.config import REPORT_HEADERS
 from TestPilot.api_handler import handle_api
+from TestPilot.ws_handler import handle_websocket
 from TestPilot.report_handler import save_to_report
 from TestPilot.utils.candy import try_wrapper
 #  external function and parameter
-import os
+import asyncio
 import logging
+
 logging = logging.getLogger(__name__)
 
+
+
 #  handler_map
+#  "ui_web": handle_ui_web,
+#  "ui_app": handle_ui_app,
+#  "robot": handle_robot,
 HANDLER_MAP = {
     "api": handle_api,
-#     "websocket": handle_websocket,
-#     "ui_web": handle_ui_web,
-#     "ui_app": handle_ui_app,
-#     "robot": handle_robot,
+    "websocket": handle_websocket,
 }
 
-@try_wrapper
-def run_testing(yaml_path: str, override_type:str = None, report_mode: str = "all"):
-    yaml_data = loading_yaml(path_shaving(yaml_path))
-    case_name = yaml_data.get('meta',{}).get('name','unknown_case')
 
-    testing_type = override_type or yaml_data.get('type', None)
-    handler = HANDLER_MAP.get(testing_type)
-    if not handler:
-        logging.debug("[DEBUG] Unsupported test type")
-        raise ValueError(f"不支援的測試類型: {testing_type}")
+@try_wrapper()
+async def run_testing(yaml_path: str, override_type:str = None, report_mode: str = "all"):
+    yaml_paths= queue_case_files(yaml_path)
     
-    logging.info(f"[START] Running {case_name} testing flow")
-    
-    report_name, result_list = handler(yaml_data)
-    save_to_report(report_name, REPORT_HEADERS, result_list, report_mode)
+    tasks = []
 
-    logging.info(f"[END] Testing Done")
+    for yaml_path in yaml_paths:
+        yaml_data = loading_yaml(yaml_path)
+        case_name = yaml_data.get('meta',{}).get('name','unknown_meta_name')
+        testing_type = override_type or yaml_data.get('type', None)
 
-    return True
+        handler = HANDLER_MAP.get(testing_type)
+        if not handler:
+            logging.debug("Unsupported test type")
+            continue
+        
+        logging.info(f"[Running] {case_name} ({testing_type})")
+
+        if asyncio.iscoroutinefunction(handler):
+            tasks.append(handler(yaml_data))
+        else:
+            tasks.append(asyncio.to_thread(handler, yaml_data))
+
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+        
+        logging.info(f"[Finish] All tests executed")

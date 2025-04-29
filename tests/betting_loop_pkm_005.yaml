@@ -1,0 +1,25 @@
+type: api
+meta:
+  name: betting_pkm_loop_005
+  env: uat
+
+cases:
+- params:
+    name: pkm_loop_60s
+    url: https://game.mybetcoo.com/games/frontend/pkm/anticipating
+    method: post
+    headers:
+      Content-Type: application/json
+    retry: 0
+    loop: 1
+    keep: None
+    body:
+      "pkmTopicId": 179
+      "targetItem": B
+      "amount": 500
+      "token": CC793C9A9A50F29FD7A9E47D9FE30F31F0BEDDB715E0D39FF6E2052B7F8E229D6A8552F947A18FCB8340E7C371A6759205BFF2EF77CF5C10F598936B0F908A8A6D6BD4D25BFE78858CA9FDE2E2B27B118D23B7C35603CC08CE005C1C05F03304BAFE70CD69E3EDC08499FFDB954C07ED5B33F1BC59651D0E0F95D99F9A0A47E3
+  expect:
+    - field: msg
+      value: 成功#成功#Success# สำเร็จ
+      comparator: equals
+
