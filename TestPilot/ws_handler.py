@@ -2,6 +2,7 @@
 from TestPilot.report_handler import combine_headers
 from TestPilot.utils.candy import try_wrapper, register_pattern, lock_with
 from TestPilot.utils.tools import msgbody_build
+from TestPilot.validator import validate_response, default_result_stamp
 #  internal parameter
 from TestPilot.config import ws_lock
 #  external function and paramter
@@ -13,6 +14,15 @@ import logging
 logging = logging.getLogger(__name__)
 
 SEND_TYPE_LIST={}
+
+def report_value_stamp (exp_key:str ="-", reps_value:str ="-",comparator:str ="-",exp_value:str ="-"):
+    return {
+        "Expected_key":   exp_key,
+        "Response_value": reps_value,
+        "Comparator":     comparator,
+        "Expected_value": exp_value,
+        "Result":         True
+    }
 
 #  add params for shared
 def add_shared_params(case_params: dict, shared_data: dict):
@@ -48,47 +58,32 @@ def get_nested_value(response: dict, field: str):
 @register_pattern(SEND_TYPE_LIST, 'websocket')
 @lock_with(ws_lock)
 async def send_ws(params, ws=None, expects=None):
-
-    #  1. build & send
+    #  1. build msg body
     msg = msgbody_build(params['msg_id'], params.get('body'))
+
+    #  1-1. ws send
     await ws.send(json.dumps(msg))
-    # logging.info(f"Sent WebSocket message: {msg}")
 
     #  2. recv & parse
-    resp = await asyncio.wait_for(ws.recv(), timeout=params.get('timeout', 6))
-    data = json.loads(resp)
-    logging.info(f"Received WebSocket response: {data.get("msgId")}")
+    response = await asyncio.wait_for(ws.recv(), timeout=params.get('timeout', 6))
 
-    #  3. validate expects
-    results, keeps = [],{}
+    logging.info(f"Received WebSocket response: {msg.get("msgId")}")
+
+    #  3. validation and return result
     if expects:
-        for exp in expects:
-            actual = get_nested_value(data, exp['field'])
-            passed = (actual == exp['value'])
-            results.append({
-                "Expected_key":   exp['field'],
-                "Response_value": actual,
-                "Comparator":     exp['comparator'],
-                "Expected_value": exp['value'],
-                "Result":         passed
-            })
+        result = validate_response(response, expects)
     else:
-        results.append({
-            "Expected_key":   '-',
-            "Response_value": '-',
-            "Comparator":     '-',
-            "Expected_value": '-',
-            "Result":         '-'
-        })
-        
-    #  4. handle keeps
-    keep_field = params.get('keep')
-    if keep_field:
-        kv = get_nested_value(data, keep_field)
-        if kv is not None:
-            keeps[keep_field] = kv
+        result = default_result_stamp()
 
-    return results, keeps
+    #  4. save the keep-field from response
+    keeps = {}
+    keep_field = params.get('keep', None)
+    if keep_field:
+        val = get_nested_value(response.json(), keep_field)
+        if val is not None:
+            keeps[keep_field] = val
+
+    return result, keeps
 
 #  handle send websocket api
 @try_wrapper(log_msg="WebSocket handling failed")

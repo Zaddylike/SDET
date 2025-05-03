@@ -10,8 +10,8 @@ cases:
     method: post
     headers:
       Content-Type: application/json
-    retry: 1
-    loop: 5
+    retry: 0
+    loop: 1
     keep: null
     body:
       userId: "1368601"

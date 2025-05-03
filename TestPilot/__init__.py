@@ -2,7 +2,8 @@ from .runner import (
     run_testing
 )
 from .validator import (
-    validate_response
+    validate_response,
+    default_result_stamp
 )
 from .config import (
     setup_logger,

@@ -5,18 +5,16 @@ meta:
 
 cases:
 - params:
-    name: demo_send
-    url: https://jsonplaceholder.typicode.com
-    method: get
+    name: sample_post_case
+    url: https://wap.qosuat.com/api/spin/spin_wheel
+    method: post
     headers:
       Content-Type: application/json
     retry: 0
     loop: 1
-    keep: None
+    keep: null
     body:
-      postId: 1
+      userId: "1368601"
+      token: "1e09f6d7b28ec5c8a546f0c7470f418b"
   expect:
-    - field: status_code
-      value: 200
-      comparator: equals
-
+    []

@@ -30,5 +30,6 @@ async def handle_stress(yaml_data):
         await asyncio.sleep(1/rate)
 
     results = await asyncio.gather(*tasks, return_exceptions=True)
-    # 可自行 collect 成報表
+
+    
     return results

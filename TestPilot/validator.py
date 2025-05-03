@@ -64,6 +64,16 @@ def get_nested_value(response: dict, validate_key: str):
 
     return str(current)
 
+def default_result_stamp (exp_key:str ="Null", resp_value:str ="Null",comparator:str ="Null",exp_value:str ="Null",result:bool=True):
+    return [{
+        "Expected_key":   exp_key,
+        "Response_value": resp_value,
+        "Comparator":     comparator,
+        "Expected_value": exp_value,
+        "Result":         result
+    }]
+
+
 @try_wrapper(log_msg="Failed to validate response")
 def validate_response(response, expects: list):
     results = []
@@ -71,7 +81,7 @@ def validate_response(response, expects: list):
         validate_key = expect['field']
         validate_value = expect.get('value', "Null")
         comparator = expect['comparator']
-        
+
         comparator_func = COMPARATOR_HANDLE[comparator]
         if not comparator_func:
             logging.debug(f"Unsupported comparator: {comparator}")
