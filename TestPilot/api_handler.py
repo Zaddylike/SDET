@@ -1,101 +1,142 @@
 #  internal function
 from TestPilot.validator import validate_response
-from TestPilot.utils.candy import try_wrapper, register_pattern
-from TestPilot.report_handler import save_to_report
+from TestPilot.utils.candy import try_wrapper, lock_with
+from TestPilot.report_handler import combine_headers
 #  internal parameter
-from TestPilot.config import REPORT_HEADERS, DEFAULT_CASE_DIR
+from TestPilot.config import http_client, client_lock
 #  external function and paramter
-import requests
+import httpx
+import asyncio
 import time
 import logging
 logging = logging.getLogger(__name__)
 
-API_TYPE_HANDLE ={}
+client = httpx.AsyncClient(timeout=10)
 
-#  send get api
+#  add params for shared to another case
 
-@try_wrapper()
-@register_pattern(API_TYPE_HANDLE, 'get')
-def send_api_get(params, expect):
-    url = params.get('url', "unknown_url")
+def add_shared_params(case_params: dict, shared_data: dict):
+    body = case_params.get('body',{})
+    for k, v in body.items():
+        if isinstance(v, str) and v.startswith('$'):
+            var = v[1:]
+            if var in shared_data:
+                body[k] = shared_data[var]
+    return case_params
+
+#  parse response inner field
+
+def get_nested_value(response, field: str):
+    #  1. parse every layers key
+    current = response
+    for key in field.split('.'):
+        if isinstance(current, list):
+            current = current[0]
+        if isinstance(current, dict):
+            current = current.get(key)
+        else:
+            logging.error(f"Unexpected structure at '{key}': {current}")
+            return "Unexpected fields"
+
+    return str(current)
+
+
+#  send the api by http
+@lock_with(client_lock)
+async def send_http(params: dict, expects: list):
+    #  1. parse the case params
+    method = params.get('method', 'get').upper()
+    url = params.get('url')
     headers = params.get('headers', {})
-    body = params.get('body', {})
+    timeout = params.get('timeout', 8)
+    
+    #  2. handle the http api type (get,post...)
+    query = params.get('body') if method == 'GET' else None
+    json_body = params.get('body') if method != 'GET' else None
 
-    response = requests.get(url, headers=headers, params=body, timeout=8)
-    return validate_response(response, expect)
+    #  3. httpx requests
+    response = await http_client.request(method, url, headers=headers, params=query, json=json_body)
 
-#  send post api
+    #  4. validation and return result
+    if expects:
+        result = validate_response(response, expects)
 
-@try_wrapper()
-@register_pattern(API_TYPE_HANDLE, 'post')
-def send_api_post(params, expect):
-    url = params.get('url', "unknown_url")
-    headers = params.get('headers', {})
-    body = params.get('body', {})
+    #  5. save the keep-field from response
+    keeps = {}
+    keep_field = params.get('keep')
+    if keep_field:
+        val = get_nested_value(response.json(), keep_field)
+        if val is not None:
+            keeps[keep_field] = val
 
-    response = requests.post(url, headers=headers, json=body, timeout=8)
-    return validate_response(response, expect)
+    return result, keeps
+
 
 #  handle send http api
 
-@try_wrapper()
+@try_wrapper(log_msg="API handling failed")
 async def handle_api(yaml_data):
+    #  1. get parameter and add default docker
     yaml_name = yaml_data.get("meta", {}).get('name','')
     cases = yaml_data.get("cases", [])
-    results = []
-    report_data = []
-    for case in cases:
+    shared_data, report_data= {},[]
+
+    #  2. for-loop to handle case    
+    for index, case in enumerate(cases):
         params = case.get('params', {})
         expect = case.get('expect', [])
-
-        name = params.get('name', "unknown_case_name")
+        name = params.get('name', "unknown_case")
         method = params.get('method', 'post')
         loops = int(params.get('loop', 1))
-        retrys = params.get('retry', 0)
+        max_retry = int(params.get('retry', 0))
 
-        # handle loop and send
+        #  3. handle loop and send
         for loop in range(loops):
-            time.sleep(1)
-            for tys in range(retrys+1):
-                start = time.perf_counter()
+            params = add_shared_params(params, shared_data)
+            results, keeps = [], {}
+            await asyncio.sleep(1.6)
+
+            #  3-1. for-loop to retry 0...max_retry
+            start = time.perf_counter()
+            for attempt in range(max_retry+1):
                 try:
-                    send_api_function = API_TYPE_HANDLE.get(method, None)
-                    if send_api_function:
-                        results =  send_api_function(params, expect)
-                except Exception as e:
-                    logging.error(f"Failed to send api: {e},and retry ({tys}/{retrys})")
-                    if tys == retrys:
-                        results = [{
-                            "Expected_key": "send_error",
-                            "Response_value": "Null",
-                            "Comparator": "Null",
-                            "Expected_value": "Null",
-                            "Result": "Fail"
+                    results, keeps = await send_http(params, expect)
+                    if all(rst['Result'] for rst in results):
+                        logging.info(f"[{name}] Success on attempt {attempt+1}/{max_retry+1}")
+                        break
+                except httpx.RequestError as httpexc:
+                    logging.warning(f"[{name}] Attempt {attempt+1}/{max_retry+1} {httpexc}")
+                    result_status, error= False, type(httpexc).__name__
+                    results = [{
+                        "Expected_key": "neenork_error",
+                        "Response_value": f"{error}",
+                        "Comparator": "Null",
+                        "Expected_value": "Null",
+                        "Result": result_status
                         }]
-                end = time.perf_counter()
-                logging.info(f"{name} ({loop+1}/{loops})")
-                break
+                except Exception as exc:
+                    logging.warning(f"[{name}] Unexpected error on attempt {attempt+1}/{max_retry+1} : {type(exc).__name__}:{exc}", exc_info=True)
+                    result_status, error = False, type(exc).__name__
+                    results = [{
+                        "Expected_key": "neenork_error",
+                        "Response_value": f"{error}",
+                        "Comparator": "Null",
+                        "Expected_value": "Null",
+                        "Result": result_status
+                        }]
+                    
+                if attempt < max_retry:
+                    await asyncio.sleep(0.5 * (2 ** attempt))
+            end = time.perf_counter()
+
+            #  4. save the keep parameter to shared_data
+            keep_field =  params.get('keep')
+            if keeps and keep_field:
+                shared_data[keep_field] = keeps[keep_field]  
+
+            #  5. exten the results to report_data
             report_data.extend(combine_headers(yaml_name, name, start, end, loop, results))
 
-        save_to_report(name, REPORT_HEADERS, report_data, 'csv')
-        return name, report_data
-
-#  conbine the report headers
-
-@try_wrapper()
-def combine_headers(api_name, case_name, start, end, i, results=None):
-    rows = []
-    for result in results:
-        row={
-            "Api_name": api_name,
-            "Case_name": case_name,
-            "Loop": i+1,
-            "Run_time": f"{end - start:.3f}s",
-            "Expected_key": result.get("Expected_key", "Null"),
-            "Response_value": result.get("Response_value", "Null"),
-            "Comparator": result.get("Comparator", "Null"),
-            "Expected_value": result.get("Expected_value", "Null"),
-            "Result": result.get("Result", "Fail"),
-            }
-        rows.append(row)
-    return rows
+    #  6. return reportname, case total testing-data
+    # save_to_report(yaml_name, REPORT_HEADERS, report_data, 'csv')
+    return yaml_name, report_data

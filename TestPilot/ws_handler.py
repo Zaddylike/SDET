@@ -1,181 +1,160 @@
 #  internal function
-from TestPilot.report_handler import save_to_report
-#  internal parameter
-from TestPilot.utils.candy import try_wrapper, register_pattern, wbsk_timer
+from TestPilot.report_handler import combine_headers
+from TestPilot.utils.candy import try_wrapper, register_pattern, lock_with
 from TestPilot.utils.tools import msgbody_build
+#  internal parameter
+from TestPilot.config import ws_lock
 #  external function and paramter
 import websockets
 import time
 import json
 import asyncio
-import copy
 import logging
 logging = logging.getLogger(__name__)
 
 SEND_TYPE_LIST={}
 
-def get_nested_value(response: dict, validate_key: str):
-    try:
-        current = response
-        # 解析每層 key
-        for key in validate_key.split('.'):
-            if isinstance(current, str):
-                try:
-                    current = json.loads(current)
-                except Exception:
-                    logging.warning(f"[Warning] Failed to decode str at key {key}")
-                    return None
-            
-            if isinstance(current, dict):
-                current = current.get(key)
-            else:
-                logging.error(f"[Error] Invalid structure at key '{key}': {current}")
+#  add params for shared
+def add_shared_params(case_params: dict, shared_data: dict):
+    body = case_params.get('body',{})
+    for k, v in body.items():
+        if isinstance(v, str) and v.startswith('$'):
+            var = v[1:]
+            if var in shared_data:
+                body[k] = shared_data[var]
+    return case_params
+
+#  parse response inner dict
+def get_nested_value(response: dict, field: str):
+    current = response
+    # parse layers key
+    for key in field.split('.'):
+        if isinstance(current, str):
+            try:
+                current = json.loads(current)
+            except Exception:
+                logging.warning(f"Unable to JSON-decode string when accessing: {key}")
                 return None
+        
+        if isinstance(current, dict):
+            current = current.get(key)
+        else:
+            logging.error(f"Unexpected structure at '{key}': {current}")
+            return "Unexpected fields"
 
-        return current
-    except Exception as e:
-        logging.error(f"[Error] Failed to parse nested value: {e}", exc_info=True)
-        return None
+    return current
 
-@try_wrapper()
-@register_pattern(SEND_TYPE_LIST, 'websocket') 
-async def send_api_websocket(params, websocket=None, expects=None):
-    results = []
-    keeps = {}
+#  send websocket api
+@register_pattern(SEND_TYPE_LIST, 'websocket')
+@lock_with(ws_lock)
+async def send_ws(params, ws=None, expects=None):
 
-    url = params.get('url')
-    msg_id = params.get('msg_id')
-    msg_body = params.get('msg_body')
-    retry = params.get('retry', 0)
-    keep = params.get('keep', None)
-
-    ws = websocket or await websockets.connect(url, ping_interval=None, ping_timeout=60)
-
-    msg = msgbody_build(msg_id, msg_body)
+    #  1. build & send
+    msg = msgbody_build(params['msg_id'], params.get('body'))
     await ws.send(json.dumps(msg))
+    # logging.info(f"Sent WebSocket message: {msg}")
 
-    tys = 0
-    while tys <= retry:
-        try:
-            resp = await asyncio.wait_for(ws.recv(), timeout=12)
-            jsonify_resp = json.loads(resp)
+    #  2. recv & parse
+    resp = await asyncio.wait_for(ws.recv(), timeout=params.get('timeout', 6))
+    data = json.loads(resp)
+    logging.info(f"Received WebSocket response: {data.get("msgId")}")
 
-            if jsonify_resp.get('msgId') != msg_id:
-                continue
-            if not expects:
-                return results, keeps
-            
-            all_pass = True
-            for expect in expects:
-                validate_key = expect.get('field')
-                expected_value = expect.get('value')
-                comparator = expect.get('comparator')
-                
-                actual_value = get_nested_value(jsonify_resp, validate_key)
-                result = {
-                    "Expected_key": validate_key,
-                    "Response_value": actual_value,
-                    "Comparator": comparator,
-                    "Expected_value": expected_value,
-                    "Result": "Pass" if actual_value == expected_value else "Fail"
-                }
+    #  3. validate expects
+    results, keeps = [],{}
+    if expects:
+        for exp in expects:
+            actual = get_nested_value(data, exp['field'])
+            passed = (actual == exp['value'])
+            results.append({
+                "Expected_key":   exp['field'],
+                "Response_value": actual,
+                "Comparator":     exp['comparator'],
+                "Expected_value": exp['value'],
+                "Result":         passed
+            })
+    else:
+        results.append({
+            "Expected_key":   '-',
+            "Response_value": '-',
+            "Comparator":     '-',
+            "Expected_value": '-',
+            "Result":         '-'
+        })
+        
+    #  4. handle keeps
+    keep_field = params.get('keep')
+    if keep_field:
+        kv = get_nested_value(data, keep_field)
+        if kv is not None:
+            keeps[keep_field] = kv
 
-                if result["Result"] == "Fail":
-                    all_pass = False
-                    
-                results.append(result)
-
-            if keep:
-                keep_value = get_nested_value(jsonify_resp, keep)
-                if keep_value is not None:
-                    keeps[keep] = keep_value
-                
-            if all_pass:
-                return results, keeps
-
-        except Exception as e:
-                logging.error(f"[Error] Failed to receive/parse websocket message: {e}", exc_info=True)        
-        tys+=1
     return results, keeps
 
-#  add params for shared
-
-def add_shared_params(case_params: dict, shared_data: dict):
-    try:
-        for k, v in case_params['msg_body'].items():
-            if isinstance(v, str) and v.startswith('$'):
-                var_name = v[1:]
-                if var_name in shared_data:
-                    case_params['msg_body'][k] = shared_data[var_name]
-        return case_params
-    except Exception as e:
-        logging.warning(f"Failed to add shared params: {e}", exc_info=True)
-
 #  handle send websocket api
-
-
-REPORT_HEADERS = [
-    "Api_name",
-    "Case_name",
-    "Loop",
-    "Run_time",
-    "Response_value",
-    "Expected_value",
-    "Result"
-    ]
-# @try_wrapper
+@try_wrapper(log_msg="WebSocket handling failed")
 async def handle_websocket(yaml_data):
+
+    #  1. get parameter and add default docker
     yaml_name = yaml_data.get("meta", {}).get('name','')
     cases = yaml_data.get("cases", [])
-    
-    shared_data = {}
-    keep_data = {}
-    report_data = []
+    shared_data, report_data= {},[]
 
-    for case in cases:
+    #  2. for-loop to handle case
+    for index, case in enumerate(cases):
         params = case.get('params', {})
-        params_copy = copy.deepcopy(params)
-        expect = case.get('expect', None)
-
-        name = params.get('name', "unknown_case_name")
+        expect = case.get('expect', [])
+        name = params.get('name', "unknown_case")
         loops = int(params.get('loop', 1))
-        keep = params.get('keep')
+        max_retry = int(params.get('retry', 0))
 
-        # handle loop and send
+        #  2-1. if ws not init , connect it
+        if "ws" not in shared_data:
+            shared_data["ws"] = await websockets.connect(params["url"], ping_interval=None, ping_timeout=60)
+        ws = shared_data["ws"]
+        logging.info(f'Running case-{index}:{name}')
+
+        #  3. for-loop to handle loop-times, retries-times
         for loop in range(loops):
-                add_shared_params(params_copy, shared_data)
-                if not shared_data.get("websocket"):
-                    shared_data["websocket"] = await websockets.connect(params_copy.get("url"), ping_interval=None, ping_timeout=60)
+            add_shared_params(params, shared_data)
+            keep_data, results= {},[]
+            # 3-1. for-loop to retry 0...max_retry
+            start = time.perf_counter()
+            for attempt in range(max_retry+1):
+                try:
+                    results, keep_data = await send_ws(params, ws, expect)
+                    if all(rst['Result'] for rst in results):
+                        logging.info(f"[{name}] Success on attempt {attempt+1}/{max_retry+1}")
+                        break
+                except (OSError, asyncio.TimeoutError, websockets.WebSocketException) as e:
+                    logging.warning(f"[{name}] Attempt {attempt+1}/{max_retry+1} : {e}", exc_info=True)
+                    results = [{
+                        "Expected_key": "send_error",
+                        "Response_value": type(e).__name__,
+                        "Comparator": "Null",
+                        "Expected_value": "Null",
+                        "Result": False
+                    }]
+                except Exception as exc:
+                    logging.warning(f"[{name}] non-validation failed on attempt {attempt+1}/{max_retry+1} : {exc}", exc_info=True)
+                    results = [{
+                        "Expected_key": "send_error",
+                        "Response_value": f"{type(exc).__name__}",
+                        "Comparator": "Null",
+                        "Expected_value": "Null",
+                        "Result": False
+                    }]
+                if attempt < max_retry:
+                    await asyncio.sleep(0.5 * (2 ** attempt))
+            end = time.perf_counter()
 
-                start = time.perf_counter()
-                results, keep_data = await send_api_websocket(params_copy, shared_data["websocket"], expect)
-                # logging.info(results)
+            #  4. save the keep parameter to shared_data
+            keep_field = params.get('keep', '')
+            if isinstance(keep_data, dict) and (keep_field in keep_data):
+                    shared_data[keep_field] = keep_data[keep_field]
 
-                end = time.perf_counter()
-                logging.info(f"{name} ({loop+1}/{loops})")
+            #  5. exten the results to report_data
+            report_data.extend(combine_headers(yaml_name, name, start, end, loop, results))
 
-                if isinstance(keep_data, dict) and (keep in keep_data):
-                        shared_data[keep] = keep_data[keep]
-
-                report_data.extend(combine_headers(yaml_name, name, start, end, loop, results))
-        #  reportname, case total testing-data by one
-    return name, report_data
-
-#  combine the response data
-
-def combine_headers(api_name, case_name, start, end, i, results=None):
-    rows = []
-    for result in results:
-        row={
-            "Api_name": api_name,
-            "Case_name": case_name,
-            "Loop": i+1,
-            "Run_time": f"{end - start:.3f}s",
-            "Expected_key": result.get("Expected_key", "Null"),
-            "Response_value": result.get("Response_value", "Null"),
-            "Comparator": result.get("Comparator", "Null"),
-            "Expected_value": result.get("Expected_value", "Null"),
-            "Result": result.get("Result", "Fail"),
-            }
-        rows.append(row)
-    return rows
+    #  6. return reportname, case total testing-data
+    # await save_to_report(yaml_name, REPORT_HEADERS, report_data, 'csv')
+    return yaml_name, report_data

@@ -1,18 +1,18 @@
 type: api
 meta:
-  name: sample_post
+  name: sample_get
   env: uat
 
 cases:
 - params:
-    name: demo_send
+    name: sample_get_case
     url: https://jsonplaceholder.typicode.com
     method: get
     headers:
       Content-Type: application/json
     retry: 0
     loop: 1
-    keep: None
+    keep: null
     body:
       postId: 1
   expect:

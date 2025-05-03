@@ -2,14 +2,15 @@
 #  internal parameter
 #  external function and paramter
 import os
-
+import asyncio
+import httpx
 #  Setting: logging style
 
 def setup_logger():
     import logging
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s.%(msecs)03d [%(levelname)s] [%(name)s:%(lineno)d] => %(message)s",
+        format="%(asctime)s.%(msecs)03d [%(levelname)s] [%(name)s:%(lineno)d]  %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
@@ -29,3 +30,10 @@ REPORT_HEADERS = [
     "Expected_value",
     "Result"
     ]
+
+
+http_client = httpx.AsyncClient(timeout=10)
+save_lock = asyncio.Lock()
+ws_lock = asyncio.Lock()
+http_lock = asyncio.Lock()
+client_lock = asyncio.Lock()

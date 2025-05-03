@@ -1,0 +1,28 @@
+type: api
+meta:
+  name: game_spin_keno
+  env: prod
+
+cases:
+- params:
+    name: spin_wheel
+    url: https://game.luckygam888.com/games/keno/doBet
+    method: post
+    headers:
+      Content-Type: application/json
+    retry: 0
+    loop: 1
+    keep: None
+    body:
+      betAmount: 10
+      token: 2AA18535C8419F7EADCEE194C522B76D4E11D91C79743AF58FDF8F3DF98996C7DC684AED998D1FC5DAF307F476F4D04F05BFF2EF77CF5C10F598936B0F908A8A0916661D2BF3C40D90D4C3D23C4B399C8F4532F4B51562B3CE005C1C05F033045CE10D11012E425E129720B5EBE947F1FDD5424D3AFD90989454E70CF84DF859
+      nums: [24,33,17,35,19,3,9,37,39,12]
+      riskLevel: 0
+  expect:
+    - field: status_code
+      value: 200
+      comparator: equals
+    - field: winAmount
+      value: null
+      comparator: read
+

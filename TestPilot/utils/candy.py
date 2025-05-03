@@ -18,7 +18,7 @@ def try_wrapper(log_msg=None):
                 try:
                     return await func(*args, **kwargs)
                 except Exception as e:
-                    logging.error(f"{log_msg or func.__name__} Failed : {e}", exc_info=True)
+                    logging.error(f"{log_msg or func.__name__}: {e}", exc_info=True)
                     raise
             return async_wrapper
         else:
@@ -27,13 +27,22 @@ def try_wrapper(log_msg=None):
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
-                    logging.error(f"{log_msg or func.__name__} Failed : {e}", exc_info=True)
+                    logging.error(f"{log_msg or func.__name__}: {e}", exc_info=True)
                     raise
             return sync_wrapper
-    if log_msg is None:
-        return decorator
-    else:
-        return decorator(log_msg)
+    return decorator
+
+# lock the function
+
+def lock_with(lock_name):
+    def decorator(func):
+        @wraps(func)
+        async def async_lock(*args, **kwargs):
+            async with lock_name:
+                return await func(*args, **kwargs)
+        return async_lock
+    return decorator
+
 
 #  register some pattern
 
