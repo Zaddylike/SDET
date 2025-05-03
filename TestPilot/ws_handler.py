@@ -67,11 +67,12 @@ async def send_ws(params, ws=None, expects=None):
     #  2. recv & parse
     response = await asyncio.wait_for(ws.recv(), timeout=params.get('timeout', 6))
 
-    logging.info(f"Received WebSocket response: {msg.get("msgId")}")
+    logging.info(f"WEBSOCKET Send WebSocket response: {msg.get("msgId")}")
 
     #  3. validation and return result
     if expects:
-        result = validate_response(response, expects)
+        jsonify_resp= json.loads(response)
+        result = validate_response(jsonify_resp, expects)
     else:
         result = default_result_stamp()
 
@@ -117,27 +118,17 @@ async def handle_websocket(yaml_data):
             for attempt in range(max_retry+1):
                 try:
                     results, keep_data = await send_ws(params, ws, expect)
+
                     if all(rst['Result'] for rst in results):
                         logging.info(f"[{name}] Success on attempt {attempt+1}/{max_retry+1}")
                         break
                 except (OSError, asyncio.TimeoutError, websockets.WebSocketException) as e:
                     logging.warning(f"[{name}] Attempt {attempt+1}/{max_retry+1} : {e}", exc_info=True)
-                    results = [{
-                        "Expected_key": "send_error",
-                        "Response_value": type(e).__name__,
-                        "Comparator": "Null",
-                        "Expected_value": "Null",
-                        "Result": False
-                    }]
+                    results = default_result_stamp(exp_key=f"{type(e).__name__}", resp_value=e, result=False)
                 except Exception as exc:
                     logging.warning(f"[{name}] non-validation failed on attempt {attempt+1}/{max_retry+1} : {exc}", exc_info=True)
-                    results = [{
-                        "Expected_key": "send_error",
-                        "Response_value": f"{type(exc).__name__}",
-                        "Comparator": "Null",
-                        "Expected_value": "Null",
-                        "Result": False
-                    }]
+                    results = default_result_stamp(exp_key=f"{type(exc).__name__}", resp_value="request_error", result=False)
+
                 if attempt < max_retry:
                     await asyncio.sleep(0.5 * (2 ** attempt))
             end = time.perf_counter()
@@ -151,5 +142,4 @@ async def handle_websocket(yaml_data):
             report_data.extend(combine_headers(yaml_name, name, start, end, loop, results))
 
     #  6. return reportname, case total testing-data
-    # await save_to_report(yaml_name, REPORT_HEADERS, report_data, 'csv')
     return yaml_name, report_data

@@ -48,8 +48,8 @@ async def run_testing(yaml_path: str, override_type:str = None, report_mode: str
     if tasks:
         results= await asyncio.gather(*tasks, return_exceptions=True)
 
-    for i in results:
-        yaml_name, report_data = i
+    for index, value in enumerate(results):
+        yaml_name, report_data = value
         await save_to_report(yaml_name, REPORT_HEADERS, report_data)
         
-    logging.info(f"All Test case execution completed")
+    logging.info(f"All Test case  execution completed")

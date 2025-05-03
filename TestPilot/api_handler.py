@@ -62,7 +62,7 @@ async def send_http(params: dict, expects: list):
         json=json_body,
         timeout=timeout
         )
-
+    
     #  3. validation and return result
     if expects:
         result = validate_response(response, expects)
@@ -73,7 +73,7 @@ async def send_http(params: dict, expects: list):
     keeps = {}
     keep_field = params.get('keep')
     if keep_field:
-        val = get_nested_value(response.json(), keep_field)
+        val = get_nested_value(response, keep_field)
         if val is not None:
             keeps[keep_field] = val
 
@@ -113,9 +113,8 @@ async def handle_api(yaml_data):
                         logging.info(f"[{name}] Success on attempt {attempt+1}/{max_retry+1}")
                         break
                 except httpx.RequestError as httpexc:
-                    logging.warning(f"[{name}] Attempt {attempt+1}/{max_retry+1} {httpexc}")
-                    results = default_result_stamp(exp_key=f"{type(httpexc).__name__}", resp_value="request_error", result=False)
-
+                    logging.warning(f"[{name}] Attempt {attempt+1}/{max_retry+1} {httpexc}", exc_info=True)
+                    results = default_result_stamp(exp_key=f"{type(httpexc).__name__}", resp_value=httpexc, result=False)
                 except Exception as exc:
                     logging.warning(f"[{name}] Unexpected error on attempt {attempt+1}/{max_retry+1} : {type(exc).__name__}:{exc}", exc_info=True)
                     results = default_result_stamp(exp_key="request_error", resp_value=f"{type(exc).__name__}",  result=False)

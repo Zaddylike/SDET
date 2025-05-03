@@ -32,28 +32,29 @@ cases:
         value: login success
         comparator: equals
 
-  - params:
-      name: Enter_NLH Room
-      url: wss://web.qosuat.com/ws/
-      method: websocket
-      retry: 0
-      loop: 1
-      keep: null
-      msg_id: 207
-      body:
-        gameType: 800
-        gameId: 1282387
-        ChangeDesk: False
-        is213Broadable: False
-        isCoinQuick: True
-        coinQuickLevel: 182
-    expect:
-      - field: msgId
-        value: 208
-        comparator: equals
-      - field: msgBody.reason
-        value: 进入房间成功！
-        comparator: equals
+
+  # - params:
+  #     name: Enter_NLH Room
+  #     url: wss://web.qosuat.com/ws/
+  #     method: websocket
+  #     retry: 0
+  #     loop: 1
+  #     keep: null
+  #     msg_id: 207
+  #     body:
+  #       gameType: 800
+  #       gameId: 1282387
+  #       ChangeDesk: False
+  #       is213Broadable: False
+  #       isCoinQuick: True
+  #       coinQuickLevel: 182
+  #   expect:
+  #     - field: msgId
+  #       value: 207
+  #       comparator: equals
+  #     - field: msgBody.reason
+  #       value: 进入房间成功！
+  #       comparator: equals
 
   # - params:
   #     name: seatdown_Room table

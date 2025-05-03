@@ -11,7 +11,7 @@ COMPARATOR_HANDLE = {}
 
 @register_pattern(COMPARATOR_HANDLE,"equals")
 def _equals(actual, expected):
-    assert actual == expected, f"Validation failed: expected {expected}, got {actual}"
+    assert actual == expected, f"Validation failed: expected [ {expected} ], got [ {actual} ]"
     return "Pass"
 
 @register_pattern(COMPARATOR_HANDLE,"not_equals")
@@ -45,24 +45,27 @@ def _read(actual, expected):
 
 def get_nested_value(response: dict, validate_key: str):
     if validate_key == 'status_code':
-        return response.status_code
-
+        return int(response.status_code)
+    
     if hasattr(response, 'json'):
         current = response.json()
     else:
         current = response
-    # logging.info(current)
+
     # 如果是str, 試著loads一次
     for key in validate_key.split('.'):
         if isinstance(current, list):
             current = current[0]
+        elif isinstance(current, str):
+            current = json.loads(current)
+        # logging.info(current)
         if isinstance(current, dict):
             current = current.get(key)
         else:
             logging.error(f"Unexpected structure at '{key}': {current}", exc_info=True)
             return "Unexpected fields"
 
-    return str(current)
+    return current
 
 def default_result_stamp (exp_key:str ="Null", resp_value:str ="Null",comparator:str ="Null",exp_value:str ="Null",result:bool=True):
     return [{
@@ -78,19 +81,19 @@ def default_result_stamp (exp_key:str ="Null", resp_value:str ="Null",comparator
 def validate_response(response, expects: list):
     results = []
     for expect in expects:
-        validate_key = expect['field']
+        validate_key = expect.get('field')
         validate_value = expect.get('value', "Null")
-        comparator = expect['comparator']
+        comparator = expect.get('comparator')
 
         comparator_func = COMPARATOR_HANDLE[comparator]
         if not comparator_func:
             logging.debug(f"Unsupported comparator: {comparator}")
             result = "Unsupported comparator"
-
         try:
+            # logging.info(response)
             resp_anwser = get_nested_value(response, validate_key)
+            # logging.info(resp_anwser)
             result = comparator_func(resp_anwser, validate_value)
-
         except Exception as e:
             result = False
             logging.error(f"Validate response error: {e}", exc_info=True)
