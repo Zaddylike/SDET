@@ -47,11 +47,17 @@ async def run_testing(yaml_path: str, override_type:str = None, report_mode: str
         logging.info(f"[Running] {meta_name} ({testing_type})")
         tasks.append(handler(yaml_data))
 
+    # sem = asyncio.Semaphore(5)  # 同時最多 5 個
+    # async def guarded_handle(yaml):
+    #     async with sem:
+    #         return await handle_ui_web(yaml)
+    # await asyncio.gather(*(guarded_handle(y) for y in yamls))
+
     if tasks:
         results= await asyncio.gather(*tasks, return_exceptions=True)
 
-    for index, value in enumerate(results):
-        yaml_name, report_data = value
-        await save_to_report(yaml_name, REPORT_HEADERS, report_data)
+    # for index, value in enumerate(results):
+    #     yaml_name, report_data = value
+    #     await save_to_report(yaml_name, REPORT_HEADERS, report_data)
         
     logging.info(f"All Test case  execution completed")

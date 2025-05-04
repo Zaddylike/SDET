@@ -20,7 +20,11 @@ def setup_logger():
 BASE_DIR = os.getcwd()
 DEFAULT_CASE_DIR = os.path.join(BASE_DIR, 'tests')
 DEFAULT_REPORT_DIR = os.path.join(BASE_DIR, 'report')
+
+# default report header 
+
 REPORT_HEADERS = [
+    "Time",
     "Api_name",
     "Case_name",
     "Loop",
@@ -32,9 +36,12 @@ REPORT_HEADERS = [
     "Result"
     ]
 
+#  http client
+
+http_client = httpx.AsyncClient(timeout=8)
+
 #  asyncio lock 
 
-http_client = httpx.AsyncClient(timeout=10)
 save_lock = asyncio.Lock()
 ws_lock = asyncio.Lock()
 http_lock = asyncio.Lock()

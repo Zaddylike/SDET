@@ -1,12 +1,14 @@
 #  internal function
-from TestPilot.report_handler import combine_headers
+from TestPilot.report_handler import combine_headers, save_to_report
 from TestPilot.utils.candy import try_wrapper, register_pattern, lock_with
 from TestPilot.utils.tools import msgbody_build
-from TestPilot.validator import validate_response, default_result_stamp
+from TestPilot.validator import validate_response, default_result_stamp, get_nested_value
 #  internal parameter
 from TestPilot.config import ws_lock
+from TestPilot.config import REPORT_HEADERS
 #  external function and paramter
 import websockets
+from datetime import datetime
 import time
 import json
 import asyncio
@@ -34,26 +36,6 @@ def add_shared_params(case_params: dict, shared_data: dict):
                 body[k] = shared_data[var]
     return case_params
 
-#  parse response inner dict
-def get_nested_value(response: dict, field: str):
-    current = response
-    # parse layers key
-    for key in field.split('.'):
-        if isinstance(current, str):
-            try:
-                current = json.loads(current)
-            except Exception:
-                logging.warning(f"Unable to JSON-decode string when accessing: {key}")
-                return None
-        
-        if isinstance(current, dict):
-            current = current.get(key)
-        else:
-            logging.error(f"Unexpected structure at '{key}': {current}")
-            return "Unexpected fields"
-
-    return current
-
 #  send websocket api
 @register_pattern(SEND_TYPE_LIST, 'websocket')
 @lock_with(ws_lock)
@@ -80,7 +62,7 @@ async def send_ws(params, ws=None, expects=None):
     keeps = {}
     keep_field = params.get('keep', None)
     if keep_field:
-        val = get_nested_value(response.json(), keep_field)
+        val = get_nested_value(response, keep_field)
         if val is not None:
             keeps[keep_field] = val
 
@@ -132,14 +114,17 @@ async def handle_websocket(yaml_data):
                 if attempt < max_retry:
                     await asyncio.sleep(0.5 * (2 ** attempt))
             end = time.perf_counter()
+            current_time = datetime.today().strftime("%Y/%m/%d %H:%M:%S")
 
             #  4. save the keep parameter to shared_data
             keep_field = params.get('keep', '')
             if isinstance(keep_data, dict) and (keep_field in keep_data):
                     shared_data[keep_field] = keep_data[keep_field]
+                    logging.info(shared_data[keep_field])
 
             #  5. exten the results to report_data
-            report_data.extend(combine_headers(yaml_name, name, start, end, loop, results))
+            report_data.extend(combine_headers(current_time, yaml_name, name, start, end, loop, results))
 
     #  6. return reportname, case total testing-data
+    await save_to_report(yaml_name, REPORT_HEADERS, report_data)
     return yaml_name, report_data

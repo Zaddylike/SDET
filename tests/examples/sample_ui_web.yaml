@@ -1,0 +1,51 @@
+type: ui_web
+
+meta:
+  name: sample_ui_web
+  env:  uat
+  url:  https://manager-oms.qosuat.com/admin/lacekaqwkzvnep/index.html
+  browser: chromium
+  headless:  False
+  args: 
+  - --start-maximized
+  timeout: 8
+
+cases:
+  - name:   goto_login_page
+    action: go
+    target: https://manager-oms.qosuat.com/admin/lacekaqwkzvnep/index.html
+
+  - name: fill_account
+    action: fill
+    selector: '#username'
+    value: qatest0001
+
+  - name: fill_password
+    action: fill
+    selector: '#password'
+    value: 396012
+
+  - name: click_loggin_button
+    action: click
+    selector: '#login_button'
+
+  - name: click_main_menu
+    action: click
+    selector: '.main-sidebar li[name="statistics"]'
+
+  - name: click_main_sub-menu
+    action: click
+    selector: '.main-sidebar li[name="statistics"]  i[name="bet_order_list"]'
+
+  - name: click_stype_keyword
+    action: fill
+    selector: '.content .seaConditions [name="stype_keyword"]'
+    value: 1368622
+
+  - name: click_submit_betRecord
+    action: click
+    selector: '.content .seaArea .btnGroups button[lay-filter="submit_betRecord"]'
+
+  - name: get_record_value
+    action: getvalue
+    selector: '[lay-table-id="betRecord_list"]  .layui-table-body .layui-table [data-index="0"] [data-field="win"] .layui-table-cell'

@@ -14,8 +14,9 @@ logging = logging.getLogger(__name__)
 
 #  conbine the report headers
 
-def combine_headers(api_name, case_name, start, end, i, results=None):
+def combine_headers(current_time, api_name, case_name, start, end, i, results=None):
     return [{
+        "Time": current_time,
         "Api_name": api_name,
         "Case_name": case_name,
         "Loop": i+1,

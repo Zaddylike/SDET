@@ -1,13 +1,16 @@
 #  internal function
 from TestPilot.validator import validate_response, default_result_stamp
 from TestPilot.utils.candy import try_wrapper, lock_with
-from TestPilot.report_handler import combine_headers
+from TestPilot.report_handler import combine_headers, save_to_report
+from TestPilot.validator import get_nested_value
 #  internal parameter
 from TestPilot.config import http_client, client_lock
+from TestPilot.config import REPORT_HEADERS
 #  external function and paramter
 import httpx
 import asyncio
 import time
+from datetime import datetime
 import logging
 logging = logging.getLogger(__name__)
 
@@ -24,23 +27,6 @@ def replace_shread_params(case_params: dict, shared_data: dict):
             if var in shared_data:
                 body[k] = shared_data[var]
     return case_params
-
-#  parse response inner field
-
-def get_nested_value(response, field: str):
-    #  1. parse every layers key
-    current = response
-    for key in field.split('.'):
-        if isinstance(current, list):
-            current = current[0]
-        if isinstance(current, dict):
-            current = current.get(key)
-        else:
-            logging.error(f"Unexpected structure at '{key}': {current}")
-            return "Unexpected fields"
-
-    return str(current)
-
 
 #  send the api by http
 
@@ -110,7 +96,6 @@ async def handle_api(yaml_data):
             for attempt in range(max_retry+1):
                 try:
                     results, keeps = await send_http(params, expect)
-
                     if all(rst.get('Result') for rst in results):
                         logging.info(f"[{name}] Success on attempt {attempt+1}/{max_retry+1}")
                         break
@@ -124,14 +109,16 @@ async def handle_api(yaml_data):
                 if attempt < max_retry:
                     await asyncio.sleep(0.5 * (2 ** attempt))
             end = time.perf_counter()
+            current_time = datetime.today().strftime("%Y/%m/%d %H:%M:%S")
 
             #  4. save the keep parameter to shared_data
             keep_field =  params.get('keep')
             if keeps and keep_field:
-                shared_data[keep_field] = keeps[keep_field]  
+                shared_data[keep_field] = keeps[keep_field]
 
             #  5. exten the results to report_data
-            report_data.extend(combine_headers(yaml_name, name, start, end, loop, results))
+            report_data.extend(combine_headers(current_time, yaml_name, name, start, end, loop, results))
 
     #  6. return reportname, case total testing-data
+    await save_to_report(yaml_name, REPORT_HEADERS, report_data)
     return yaml_name, report_data

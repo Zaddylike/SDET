@@ -4,6 +4,8 @@ from TestPilot.utils.candy import try_wrapper, register_pattern
 #  external function and paramter
 import json
 import logging
+import httpx
+from functools import reduce
 logging = logging.getLogger(__name__)
 
 COMPARATOR_HANDLE = {}
@@ -43,29 +45,21 @@ def _not_contains(actual, expected):
 def _read(actual, expected):
     return "Pass"
 
-def get_nested_value(response: dict, validate_key: str):
-    if validate_key == 'status_code':
-        return int(response.status_code)
-    
-    if hasattr(response, 'json'):
+def get_nested_value(response, validate_key: str):
+    if isinstance(response, httpx.Response):
         current = response.json()
     else:
         current = response
-
-    # 如果是str, 試著loads一次
-    for key in validate_key.split('.'):
-        if isinstance(current, list):
-            current = current[0]
-        elif isinstance(current, str):
-            current = json.loads(current)
-        # logging.info(current)
-        if isinstance(current, dict):
-            current = current.get(key)
-        else:
-            logging.error(f"Unexpected structure at '{key}': {current}", exc_info=True)
-            return "Unexpected fields"
-
-    return current
+        
+    def jsonify_value(current,key):
+        if isinstance(current, str):
+            try:
+                current = json.loads(current)
+            except Exception:
+                return None
+        return current.get(key) if isinstance(current, dict) else None
+    
+    return reduce(jsonify_value, validate_key.split('.'), current)
 
 def default_result_stamp (exp_key:str ="Null", resp_value:str ="Null",comparator:str ="Null",exp_value:str ="Null",result:bool=True):
     return [{
@@ -91,7 +85,10 @@ def validate_response(response, expects: list):
             result = "Unsupported comparator"
         try:
             # logging.info(response)
-            resp_anwser = get_nested_value(response, validate_key)
+            if validate_key == "status_code":
+                resp_anwser = response.status_code
+            else:
+                resp_anwser = get_nested_value(response, validate_key)
             # logging.info(resp_anwser)
             result = comparator_func(resp_anwser, validate_value)
         except Exception as e:

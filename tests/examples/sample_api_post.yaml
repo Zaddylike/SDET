@@ -12,7 +12,7 @@ cases:
       Content-Type: application/json
     retry: 0
     loop: 1
-    keep: null
+    keep: data.awards.award_type
     body:
       userId: "1368601"
       token: "1e09f6d7b28ec5c8a546f0c7470f418b"

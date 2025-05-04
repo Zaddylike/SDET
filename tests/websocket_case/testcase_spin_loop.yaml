@@ -1,29 +1,6 @@
-apiname: Spin Loop
+type: post
 env: dev
 case:
-- params:
-    casename: 登入
-    url: wss://web-pp2.pkxxz.com/ws/
-    method: websocket
-    headers:
-      Content-Type: "application/json"
-    retry: True
-    loop: 0
-    keep: token
-    msgid: 201
-    body:
-      "userName": "+852 0911"
-      "password": "V1ZkR2FGbFVSWGxOZWxFOUt6ZzFNaUF3T1RFeHFhendzeA=="
-      "imei": ""
-      "model": ""
-      "channel": "德州"
-      "channelInt": 100
-      "version": 1.15.24.5
-      "jingDu": 200
-      "weiDu": 200
-      "language": 0
-      "verify": 1
-  expect: [201, login success]
 - params:
     casename: spin
     url: https://web-pp2.pkxxz.com/api/spin/spin_wheel
@@ -35,6 +12,6 @@ case:
     keep: token
     msgid: 201
     body:
-      "userId": "1731088"
-      "token": "$token"
+      "userId": 1368601
+      "token": 1e09f6d7b28ec5c8a546f0c7470f418b
   expect: [200, ""]
