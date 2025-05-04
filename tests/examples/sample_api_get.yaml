@@ -5,14 +5,14 @@ meta:
 
 cases:
 - params:
-    name: sample_get_case
-    url: https://jsonplaceholder.typicode.com
+    name:   sample_get_case
+    url:    https://jsonplaceholder.typicode.com
     method: get
     headers:
       Content-Type: application/json
     retry: 0
-    loop: 1
-    keep: null
+    loop:  1
+    keep:  null
     body:
       postId: 1
   expect:

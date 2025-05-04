@@ -1,0 +1,27 @@
+type: ui_web
+
+meta:
+  name: sample_ui_web
+  url:  https://manager-oms.qosuat.com/admin/lacekaqwkzvnep/index.html
+  browser: chromium
+  headless:  False
+  env:  uat
+
+cases:
+  - name:   goto_login_page
+    action: goto
+    target: https://manager-oms.qosuat.com/admin/lacekaqwkzvnep/index.html
+
+  - name: fill_account
+    action: fill
+    element: '#username'
+    value: qatest0001
+
+  - name: fill_password
+    action: fill
+    element: '#password'
+    value: 396012
+
+  - name: click_loggin_button
+    action: click
+    element: '#login_button'

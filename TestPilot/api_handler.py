@@ -16,6 +16,8 @@ logging = logging.getLogger(__name__)
 
 def replace_shread_params(case_params: dict, shared_data: dict):
     body = case_params.get('body',{})
+    if not isinstance(body,dict):
+        return case_params
     for k, v in body.items():
         if isinstance(v, str) and v.startswith('$'):
             var = v[1:]
@@ -116,7 +118,7 @@ async def handle_api(yaml_data):
                     logging.warning(f"[{name}] Attempt {attempt+1}/{max_retry+1} {httpexc}", exc_info=True)
                     results = default_result_stamp(exp_key=f"{type(httpexc).__name__}", resp_value=httpexc, result=False)
                 except Exception as exc:
-                    logging.warning(f"[{name}] Unexpected error on attempt {attempt+1}/{max_retry+1} : {type(exc).__name__}:{exc}", exc_info=True)
+                    logging.warning(f"[{name}] Unexpected Error {attempt+1}/{max_retry+1} : {type(exc).__name__}:{exc}", exc_info=True)
                     results = default_result_stamp(exp_key="request_error", resp_value=f"{type(exc).__name__}",  result=False)
                     
                 if attempt < max_retry:

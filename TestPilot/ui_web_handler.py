@@ -1,13 +1,53 @@
-import logging, time
+#  internal function
+from TestPilot.validator import default_result_stamp
+from TestPilot.utils.candy import try_wrapper, lock_with
+from TestPilot.report_handler import combine_headers
+#  internal parameter
+#  external function and paramter
+import httpx
+import asyncio
+import time
 from playwright.sync_api import sync_playwright
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s.%(msecs)03d [%(levelname)s] [%(name)s:%(lineno)d] => %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    )
+import logging
+logging = logging.getLogger(__name__)
 
 target_domain = "https://manager-oms.qosuat.com/admin/lacekaqwkzvnep/index.html"
+
+
+@try_wrapper(log_msg="Failed to handling ui_web ")
+async def handle_ui_web(yaml_data):
+    #  1. get parameter and add default docker
+    yaml_name = yaml_data.get("meta", {}).get('name','')
+    cases = yaml_data.get("cases", [])
+    shared_data, report_data= {},[]
+
+    #  2. for-loop to handle case    
+    for index, case in enumerate(cases):
+        
+        params = case.get('params', {})
+        expect = case.get('expect', "")
+        name = params.get('name', "unknown_case")
+        loops = int(params.get('loop', 1))
+        max_retry = int(params.get('retry', 0))
+
+        #  3. handle loop and send
+        for loop in range(loops):
+            params = replace_shread_params(params, shared_data)
+            results, keeps = [], {}
+            await asyncio.sleep(0.5)
+
+            #  3-1. for-loop to retry 0...max_retry
+
+
+
+            #  5. exten the results to report_data
+            # report_data.extend(combine_headers(yaml_name, name, start, end, loop, results))
+
+    #  6. return reportname, case total testing-data
+    return yaml_name, report_data
+
+
+
 
 def locator_click(page, element, timeout=10000):
     current_element = page.locator(element)
@@ -70,6 +110,3 @@ def main():
 def stopping_server(browser, context):
     context.close()
     browser.close()
-
-if __name__ == "__main__":
-    main()

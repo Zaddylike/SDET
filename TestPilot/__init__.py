@@ -37,3 +37,6 @@ from .ws_handler import (
 from .stress_handler import (
     handle_stress
 )
+from .ui_web_handler import (
+    handle_ui_web
+)

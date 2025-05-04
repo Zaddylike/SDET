@@ -120,14 +120,14 @@ async def handle_websocket(yaml_data):
                     results, keep_data = await send_ws(params, ws, expect)
 
                     if all(rst['Result'] for rst in results):
-                        logging.info(f"[{name}] Success on attempt {attempt+1}/{max_retry+1}")
+                        logging.info(f"[{name}] Success on Attempt {attempt+1}/{max_retry+1}")
                         break
                 except (OSError, asyncio.TimeoutError, websockets.WebSocketException) as e:
                     logging.warning(f"[{name}] Attempt {attempt+1}/{max_retry+1} : {e}", exc_info=True)
                     results = default_result_stamp(exp_key=f"{type(e).__name__}", resp_value=e, result=False)
                 except Exception as exc:
-                    logging.warning(f"[{name}] non-validation failed on attempt {attempt+1}/{max_retry+1} : {exc}", exc_info=True)
-                    results = default_result_stamp(exp_key=f"{type(exc).__name__}", resp_value="request_error", result=False)
+                    logging.warning(f"[{name}] Unexpected Error {attempt+1}/{max_retry+1} : {exc}", exc_info=True)
+                    results = default_result_stamp(exp_key="request_error", resp_value=f"{type(exc).__name__}", result=False)
 
                 if attempt < max_retry:
                     await asyncio.sleep(0.5 * (2 ** attempt))

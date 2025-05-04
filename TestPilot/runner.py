@@ -2,6 +2,7 @@
 from TestPilot.data_loader import loading_yaml, case_queue
 from TestPilot.api_handler import handle_api
 from TestPilot.ws_handler import handle_websocket
+from TestPilot.ui_web_handler import handle_ui_web
 from TestPilot.stress_handler import handle_stress
 from TestPilot.robot_handler import handle_robot
 from TestPilot.utils.candy import try_wrapper
@@ -14,14 +15,15 @@ import logging
 logging = logging.getLogger(__name__)
 
 #  handler_map
-#  "ui_web": handle_ui_web,
-#  "ui_app": handle_ui_app,
+    #  "ui_app": handle_ui_app,
+    # "stress": handle_stress,
 
 HANDLER_MAP = {
     "api": handle_api,
     "websocket": handle_websocket,
     "stress": handle_stress,
     "robot": handle_robot,
+    "ui_web": handle_ui_web,
 }
 
 
