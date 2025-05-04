@@ -39,9 +39,15 @@ async def handle_ui_web(yaml_data):
 
         except  Exception as e:
             logging.error(f"Unexpected Error: {e}", exc_info=True)
-
-    await context.close()
-    await browser.close()
+        finally:
+            try:
+                await context.close()
+            except Exception as e:
+                logging.warning(f"context.close() failed: {e}")
+            try:
+                await browser.close()
+            except Exception as e:
+                logging.warning(f"browser.close() failed: {e}")
 
     return yaml_name
 
@@ -90,7 +96,7 @@ async def _getvalue(page, case, timeout=8000):
     # page.screenshot(path="record.png")
     value = await selector.text_content()
     logging.info(value)
-    return selector.text_content()
+    return value
 
 @register_pattern(action_pattern, "wait")
 async def _wait(page, case, timeout=8000):
