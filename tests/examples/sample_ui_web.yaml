@@ -32,7 +32,8 @@ cases:
   - name: click_main_menu
     action: click
     selector: '.main-sidebar li[name="statistics"]'
-
+    selector: '[class="input-width"]'
+    
   - name: click_main_sub-menu
     action: click
     selector: '.main-sidebar li[name="statistics"]  i[name="bet_order_list"]'

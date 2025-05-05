@@ -35,7 +35,7 @@ async def handle_ui_web(yaml_data):
                     logging.debug(f"Unsupported action {case.get('action')}")
                     continue
                 await function(page, case)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.3)
 
         except  Exception as e:
             logging.error(f"Unexpected Error: {e}", exc_info=True)
@@ -82,7 +82,6 @@ async def _click(page, case, timeout=8000):
     
     selector = page.locator(selector)
     await selector.wait_for(state="visible", timeout=timeout)
-    await asyncio.sleep(1)
     # logging.info(f"click {selector}")
     await selector.click()
 
