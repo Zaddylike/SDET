@@ -5,8 +5,8 @@ meta:
 
 cases:
 - params:
-    name:   sample_get_case
-    url:    https://jsonplaceholder.typicode.com
+    name: sample_get_case
+    url: https://jsonplaceholder.typicode.com/posts/1
     method: get
     headers:
       Content-Type: application/json
@@ -14,9 +14,11 @@ cases:
     loop: 1
     keep: null
     body:
-      postId: 1
+      {}
   expect:
     - field: status_code
       value: 200
       comparator: equals
-
+    - field: id
+      value: 1
+      comparator: equals

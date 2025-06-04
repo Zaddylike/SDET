@@ -47,10 +47,12 @@ def _read(actual, expected):
 
 def get_nested_value(response, validate_key: str):
     if isinstance(response, httpx.Response):
-        current = response.json()
+        if validate_key == "status_code":
+            return response.status_code
+        else:
+            current = response.json()
     else:
         current = response
-        
     def jsonify_value(current,key):
         if isinstance(current, str):
             try:

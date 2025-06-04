@@ -6,21 +6,20 @@ meta:
 cases:
 - params:
     name: sample_post_case
-    url: https://wap.qosuat.com/api/spin/spin_wheel
+    url: https://jsonplaceholder.typicode.com/posts
     method: post
     headers:
       Content-Type: application/json
     retry: 0
     loop: 1
-    keep: data.awards.award_type
+    keep: null
     body:
-      userId: "1368601"
-      token: "1e09f6d7b28ec5c8a546f0c7470f418b"
+      postId: 1
   expect:
     - field: status_code
-      value: 200
+      value: 201
       comparator: equals
-    - field: data.awards.award_type
-      value: COIN
+    - field: id
+      value: 101
       comparator: equals
 

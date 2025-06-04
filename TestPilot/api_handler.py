@@ -50,7 +50,6 @@ async def send_http(params: dict, expects: list):
         json=json_body,
         timeout=timeout
         )
-    
     #  3. validation and return result
     if expects:
         result = validate_response(response, expects)

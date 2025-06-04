@@ -5,7 +5,7 @@ __pycache__/
 *.dll
 *.drawio
 
-# VSCode 設定
+# VSCode settings
 # .vscode/settings.json
 
 # 測試記錄
@@ -16,12 +16,12 @@ __pycache__/
 *.txt
 *.zip
 
-# 虛擬環境
+# virtual env
 .env/
 .venv/
 env/
 venv/
 
-# 其他忽略
+# another ignore
 .DS_Store
 

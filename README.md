@@ -1,30 +1,17 @@
 # TestPilot 測試框架
 
 ## 1. 介紹
-TestPilot 是一套輕量化、YAML 驅動的 API／WebSocket 自動化測試框架，支援同步/非同步、限流、重試、報表輸出。
+
+TestPilot 是一套由YAML 驅動的 API／WebSocket、UI Web、App自動化測試工具，支援API的同步/非同步、限流、重試，介面操作以及報表輸出。
 
 ## 2. 安裝
-```bash
-git clone https://repo/YourOrg/TestPilot.git
-cd TestPilot
-pip install -r requirements.txt
 
 3. 快速開始
-在 cases/ 下撰寫 .yaml：
-type: api
-meta:
-  name: demo_case
-  env: uat
-cases:
-  - params:
-      name: test1
-      url: https://api.example.com/…
-      method: get
-    expect:
-      - field: status_code
-        value: 200
+
 4. CLI 參數
 --yaml: 指定 YAML 路徑或資料夾
+
+*測試腳本路徑不用加tests
 
 --override-type: 強制指定測試類型 (api、websocket …)
 
