@@ -58,31 +58,30 @@ async def _go(page, case):
 
 @register_pattern(action_pattern, "fill")
 async def _fill(page, case, timeout=8000):
+    action = case.get("action")
     selector = case.get("selector")
     value = case.get("value", "")
 
     if not selector:
-        logging.warning("缺少 selector")
+        logging.warning(f"缺少 {action} selector")
         return
     
     selector = page.locator(selector)
     await selector.wait_for(state="visible", timeout=timeout)
-    
-    # logging.info(f"fill {selector} with {value}")
     await selector.click()
     await selector.fill(str(value))
 
 @register_pattern(action_pattern, "click")
 async def _click(page, case, timeout=8000):
+    action = case.get("action")
     selector = case.get("selector")
 
     if not selector:
-        logging.warning("缺少 selector")
+        logging.warning(f"缺少 {action} selector")
         return
     
     selector = page.locator(selector)
     await selector.wait_for(state="visible", timeout=timeout)
-    # logging.info(f"click {selector}")
     await selector.click()
 
 

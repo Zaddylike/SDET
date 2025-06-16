@@ -20,9 +20,14 @@ def loading_yaml(fileName: str):
 #  check .yaml file amount
 @try_wrapper(log_msg="Failed to queue case files")
 def case_queue(path: str):
-    path = str(path).strip()
-    path = os.path.normpath(path).lstrip('\\/')
-    path = os.path.join(DEFAULT_CASE_DIR, path)
+    path = os.path.normpath(path)
+    abs_path = os.path.abspath(path)
+    abs_default = os.path.abspath(DEFAULT_CASE_DIR)
+
+    if os.path.commonpath([abs_path, abs_default]) == DEFAULT_CASE_DIR:
+        pass
+    else:
+        path = os.path.join(DEFAULT_CASE_DIR, path)
 
     if os.path.isdir(path):
         return [os.path.join(path, f) for f in os.listdir(path) if f.endswith(".yaml") or f.endswith(".yml")]

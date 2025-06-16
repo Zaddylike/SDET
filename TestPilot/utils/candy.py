@@ -12,6 +12,7 @@ import time
 
 def try_wrapper(log_msg=None):
     def decorator(func):
+
         if asyncio.iscoroutinefunction(func):
             @wraps(func)
             async def async_wrapper(*args, **kwargs):
@@ -30,6 +31,7 @@ def try_wrapper(log_msg=None):
                     logging.error(f"{log_msg or func.__name__}: {e}", exc_info=True)
                     raise
             return sync_wrapper
+        
     return decorator
 
 # lock the function
